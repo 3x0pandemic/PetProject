@@ -8,6 +8,7 @@ body {
 .navbar .container {
   margin: 0px;
 }
+
 .navbar-right {
   margin-right: -17vw;
 }
@@ -15,7 +16,7 @@ body {
 .navbar-brand {
   position: absolute;
   /*overflow: hidden;*/
-  max-width: 35vw;
+  max-width: 420px;
   padding-top: 1vh;
   padding-bottom: 0;
 }
@@ -61,7 +62,7 @@ Button:focus {
   height: 100%;
 }
 
-.homeContainer{
+.homeContainer {
   overflow: hidden;
   background-size: cover;
   width: 100%;
@@ -84,6 +85,14 @@ Button:focus {
   background-attachment: fixed
 }
 
+@media (max-width:480px) {
+  .header {
+    background: url(/images/logo3.png) no-repeat, url(/images/dogsrunningcropped.jpg) no-repeat;
+    background-size: 250px, cover;
+    background-position: center;
+  }
+}
+
 .header img {
   max-width: 100%;
   -moz-transition: all 1.4s;
@@ -92,9 +101,9 @@ Button:focus {
 }
 
 .header:hover {
-  -moz-transform: scale(1.05);
-  -webkit-transform: scale(1.05);
-  transform: scale(1.05);
+  -moz-transform: scale(1.01);
+  -webkit-transform: scale(1.01);
+  transform: scale(1.01);
 }
 
 .words {
@@ -117,6 +126,17 @@ Button:focus {
   opacity: 0.8;
 }
 
+/*---------------------------------------------div to work on------------------------------------*/
+/*.child {
+  z-index: 999;
+  display: none;
+}
+
+.homediv1:hover .child {
+  display: block;
+  text-align: center;
+}*/
+/*------------------------------------------------end-----------------------------------------*/
 .homediv1:hover img {
   -moz-transform: scale(1.01);
   -webkit-transform: scale(1.01);
@@ -148,32 +168,6 @@ Button:focus {
   transition: 1s;
 }
 
-.outterhomediv {
-}
-
-.homediv {
-  overflow: hidden;
-  margin-top: 70px;
-  background-size: 100%;
-  font-family: 'Raleway', sans-serif;
-  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);
-  -webkit-transition: transform .5s ease-in-out;
-}
-
-.homediv img {
-  max-width: 99%;
-  max-height: 99%;
-  -moz-transition: all 1.4s;
-  -webkit-transition: all 1.4s;
-  -webkit-transition: all .5s ease-in-out;
-}
-
-.homediv:hover img {
-  -moz-transform: scale(1.01);
-  -webkit-transform: scale(1.01);
-  transform: scale(1.01);
-}
-
 .sponsorship {
   background-color: #222222;
   color: #ffffff;
@@ -183,34 +177,35 @@ Button:focus {
   font-family: 'Raleway', sans-serif;
 }
 
+@media (max-width:480px) {
+  .sponsorship {
+    height: 55.4vh;
+  }
+}
+
 .sponsorshipHeader {
-  line-height: 20vh;
+  line-height: 10vh;
   font-family: 'Raleway', sans-serif;
 }
 
 /*------------------------------------DisplayPets----------------------*/
 .thumbnail.pet-card {
-  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);
-  /*margin: 0 2px 15px;*/
+  box-shadow: -2px 4px 10px -1px rgba(0,0,0,.4);
   -webkit-column-break-inside: avoid;
   -moz-column-break-inside: avoid;
-  column-break-inside: avoid;
-  padding: 15px;
-  padding-bottom: 5px;
-
+  /*column-break-inside: avoid;*/
+  margin: 10px;
   -webkit-transition: all .2s ease;
   -moz-transition: all .2s ease;
   -o-transition: all .2s ease;
   transition: all .2s ease;
 }
 
-@media screen and (min-width:480px)  {
+@media screen and (min-width:480px) {
   .thumbnail.pet-card {
     padding: 0px;
     margin-bottom: 20px;
     width: 400px;
-    margin-bottom: 15px;
-    color: red;
     margin-top: 10px;
   }
 }
@@ -218,7 +213,7 @@ Button:focus {
 @media (min-width:1281px) {
   .thumbnail.pet-card {
     width: 320px;
-    margin-left: 19px;
+    margin-left: 1.5vw;
   }
 }
 
@@ -230,74 +225,57 @@ Button:focus {
   text-align: justify;
 }
 
-
-
 .thumbnail.pet-card img {
   width: 100%;
-  /*box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);*/
   border-radius: 5px;
 }
 
 #wrapper {
 	width: 100vw;
-	/*max-width: 1100px;
-	min-width: 800px;*/
   padding-top: 10vh;
 }
 
 #columns {
 	column-gap: 0vw;
-	column-fill: auto;
   padding-top: 50px;
+  padding-bottom: 20px;
 };
 
-@media (min-width:480px)  {
+@media (min-width:480px) {
   #columns {
     column-count: 1;
-    column-width:
   }
 }
 
-@media (min-width: 740px){
+@media (min-width: 820px) {
   #columns {
     column-count: 2;
   }
 }
 
-@media (min-width: 1100px){
+@media screen and (min-aspect-ratio: 370/665) and (max-aspect-ratio: 1024/1366) {
+  #columns {
+    column-count: 1;
+  }
+  .thumbnail.pet-card {
+    text-align: center;
+    width: 100vw;
+    margin-left: 0px;
+    margin-bottom: 1vh;
+  }
+}
+
+@media (min-width: 1228px) {
   #columns {
     column-count: 3;
   }
 }
-
 
 @media (min-width:1281px) {
   #columns{
     column-count: 4;
   }
 }
-
-
-
-
-/*@media (max-width: 960px) {
-	#columns {
-		-webkit-column-count: 3;
-		-moz-column-count: 3;
-		column-count: 3;
-	}
-}*/
-
-/*.yellow-button {
-  background-color: #F1B73F;
-  font-family: 'Raleway', sans-serif;
-}
-
-.blue-button {
-  background-color: #007187;
-  color: white;
-  font-family: 'Raleway', sans-serif;
-}*/
 
 .heart-button {
   color: red;
@@ -309,8 +287,6 @@ Button:focus {
   box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);
   border-radius: 5px;
 }
-
-
 
 #card-text {
   font-family: 'Raleway', sans-serif;

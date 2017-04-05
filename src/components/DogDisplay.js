@@ -8,8 +8,4 @@ class DogDisplay extends DisplayPets {
   }
 }
 
-
-
-
-
 export default inject("userStore")(observer(DogDisplay));

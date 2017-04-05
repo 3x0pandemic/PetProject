@@ -30,9 +30,11 @@ export default class Home extends React.Component {
         </Grid>
         <div className="sponsorship">
           <h1 className="sponsorshipHeader">Sponsorship</h1>
-          <p>It takes between $250 to $400 to care for one animal in our shelter for a year.
-          with a little help from you our fuzzy four legged friends can stay warm and fed.</p>
-          <p>sponsor an animal today!</p>
+          <h4 id="sponsorshipParagraph">It takes between $450 to $600 to care for one animal for one year,<br/>
+          <h3>That equals out to just over $1 per day.</h3>
+          <br/> Donating by sponsoring an animal will help provide these four legged friends with<br/>food, water and shelter
+           until they are adopted by a loving family</h4>
+          <h3 id="sponsorshipParagraph">click one of the photos above<br/> to sponsor an animal today!</h3>
         </div>
       </div>
     );

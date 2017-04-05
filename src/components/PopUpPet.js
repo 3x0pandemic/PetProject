@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import ReactDOM from 'react-dom';
 import { Col, Button, ButtonToolbar, Modal } from 'react-bootstrap';
 import DisplayPets from './DisplayPets';
+import Sponsorship from './Sponsorship';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../public/style.css';
 import React, {Component, PropTypes} from 'react';
@@ -20,6 +21,7 @@ class PopUpPet extends React.Component{
           <br/>
             <img id="image-gallery-image" className="img-responsive"
             src={this.props.pet.mainPhoto}/>
+            <Sponsorship pet={this.props.pet}/>
           </Col>
           <Col xs={12} md={8} lg={8}>
           <br/>

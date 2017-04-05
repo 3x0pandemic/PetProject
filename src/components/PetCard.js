@@ -14,6 +14,7 @@ class PetCard extends React.Component {
     this.getCookie = this.getCookie.bind(this);
     this.heartPet = this.heartPet.bind(this);
     this.isFavorite = this.isFavorite.bind(this);
+    this.cardProgressPercentage = this.cardProgressPercentage.bind(this);
   }
 
   isFavorite() {
@@ -44,12 +45,18 @@ class PetCard extends React.Component {
     this.props.userStore.heartPet(this.props.pet);
   }
 
+  cardProgressPercentage(num) {
+    return (num/500) * 100;
+  }
+
   render() {
     let lgClose = () => this.setState({ lgShow: false });
     let heartButtonClass = this.isFavorite() ? "heart-button" : "";
     return(
       <div className="pet-div" key={this.props.pet.name} id={this.props.pet.animalId}>
         <Thumbnail className="pet-card" src={this.props.pet.mainPhoto} alt="Image">
+          <ProgressBar now={this.cardProgressPercentage(this.props.pet.amountSponsored)}
+                       label={`$${this.props.pet.amountSponsored}`} />
           <h2>{this.props.pet.name}</h2>
           <h4>Sponsor Me!</h4>
           <ButtonToolbar>

@@ -1,8 +1,5 @@
 import React from 'react';
-import mongoose from 'mongoose';
-import PopUpPet from './PopUpPet';
 import PetCard from './PetCard';
-import { Button, ButtonToolbar, Col, Row, Thumbnail, Grid } from 'react-bootstrap';
 // import { observer, inject } from 'mobx-react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../public/style.css';

@@ -14,7 +14,7 @@
 #   Real-Time Updates
 #   Real-Time Email Notifications
 #   Mobile Ready Display
-#   Responsive tiles
+#   Responsive Tiles
 #   Sponsorship Interactivity
 #   Image Gallery
 #   Social Media Sharing

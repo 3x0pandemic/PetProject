@@ -1,4 +1,3 @@
-import React from 'react';
 import DisplayPets from './DisplayPets';
 import { observer, inject } from 'mobx-react';
 

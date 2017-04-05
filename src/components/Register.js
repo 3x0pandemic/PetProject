@@ -1,8 +1,8 @@
-import ReactDOM from 'react-dom';
-import { Col, Button, ButtonToolbar, Modal } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../public/style.css';
-import React, {Component} from 'react';
+import React from 'react';
+
 
 class Register extends React.Component{
   constructor() {
@@ -12,7 +12,8 @@ class Register extends React.Component{
       email: "",
       password: "",
       registered: false,
-      subscribed: false
+      subscribed: false,
+
     };
     this.handleNameChange = this.handleNameChange.bind(this);
     this.handlePasswordChange = this.handlePasswordChange.bind(this);
@@ -37,6 +38,10 @@ class Register extends React.Component{
     this.setState({subscribed: true});
   }
 
+  handleValidatedChange() {
+    this.setState({validated: true});
+  }
+
   addNewUserToDatabase(e) {
     e.preventDefault();
     fetch('/user/newUser',{
@@ -55,9 +60,13 @@ class Register extends React.Component{
     this.setState({registered: true});
   }
 
+  validateNewUser() {
+
+  }
+
 
   render() {
-    if(this.state.registered) {
+    if(this.state.registered === true) {
       return(
         <div>
           <br/>
@@ -83,8 +92,8 @@ class Register extends React.Component{
           <br/>
           <br/>
           <p>
-            <input onClick={this.handleSubscribedChange} type="checkbox" id="cbox1" value="first_checkbox"/>
-            <label>&nbsp; Be Notified As New Pets Are Added</label>
+            <input onClick={this.handleSubscribedChange} type="checkbox" id="cbox1" value="subscribe_checkbox"/>
+            <label>&nbsp; Get Notified As New Pets Are Added</label>
           </p>
           <br/>
           <Button onClick={this.addNewUserToDatabase} type="submit">Submit</Button>

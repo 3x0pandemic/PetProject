@@ -1,5 +1,3 @@
-import React from 'react';
-import webpack from 'webpack';
 import hash from 'password-hash';
 import User from '../models/user';
 import jwt from 'jsonwebtoken';
@@ -22,6 +20,7 @@ userRoutes.post('/newUser', function(req, res) {
   user.password = hash.generate(req.body.password);
   user.email = req.body.email;
   user.subscribed = req.body.subscribed;
+
 
   user.save(function(err, user){
     if(err){

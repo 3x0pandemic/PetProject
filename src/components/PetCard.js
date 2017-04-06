@@ -81,7 +81,7 @@ class PetCard extends React.Component {
 
 PetCard.propTypes = {
   pet: React.PropTypes.object,
-  userStore: React.PropTypes.object,
+  userStore: React.PropTypes.object
 };
 
 export default inject("userStore")(observer(PetCard));

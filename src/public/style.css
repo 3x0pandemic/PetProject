@@ -1,21 +1,28 @@
 
 body {
-  /*display: inline-grid;*/
   background-color: #dbdbdb;
   background-size: 100%;
 }
 
-.navbar .container {
-  margin: 0px;
+.navbar {
+  border-radius: 0px;
 }
 
-.navbar-right {
-  margin-right: -17vw;
+.navbar a {
+  font-size: 16px;
+  color: white;
+}
+.navbar a:hover {
+  color: white;
+  text-decoration: none;
+}
+
+.navbar .container {
+  width: 100%;
 }
 
 .navbar-brand {
   position: absolute;
-  /*overflow: hidden;*/
   max-width: 420px;
   padding-top: 1vh;
   padding-bottom: 0;
@@ -29,7 +36,7 @@ body {
 
 .Navbar {
   position: fixed;
-  width: 100vw;
+  width: 100%;
   z-index: 20;
   margin-top: 0px;
   padding-top: 0px;
@@ -55,6 +62,25 @@ Button:focus {
 
 .navLinks {
   margin-top: 1vh;
+}
+
+/* Make the collapsed navbar show up on a larger screen size than
+ * bootstrap's default
+ * http://stackoverflow.com/questions/21076922/bootstrap-how-to-collapse-navbar-earlier
+ */
+@media only screen and (max-width : 992px) {
+  .navbar-collapse.collapse {
+    display: none !important;
+  }
+  .navbar-collapse.collapse.in {
+    display: block !important;
+  }
+  .navbar-header .collapse, .navbar-toggle {
+    display:block !important;
+  }
+  .navbar-header {
+    float:none;
+  }
 }
 
 .dogContainer {
@@ -111,6 +137,8 @@ Button:focus {
 }
 
 .homediv1 {
+  background: url(/images/Dogshover.jpg) no-repeat;
+  background-position: right;
   display:block;
   margin: 3%;
   overflow: hidden;
@@ -126,17 +154,6 @@ Button:focus {
   opacity: 0.8;
 }
 
-/*---------------------------------------------div to work on------------------------------------*/
-/*.child {
-  z-index: 999;
-  display: none;
-}
-
-.homediv1:hover .child {
-  display: block;
-  text-align: center;
-}*/
-/*------------------------------------------------end-----------------------------------------*/
 .homediv1:hover img {
   -moz-transform: scale(1.01);
   -webkit-transform: scale(1.01);
@@ -146,6 +163,8 @@ Button:focus {
 }
 
 .homediv2 {
+  background: url(/images/Catshover.jpg) no-repeat;
+  background-position: left;
   display:block;
   margin: 3%;
   font-family: 'Raleway', sans-serif;
@@ -172,15 +191,9 @@ Button:focus {
   background-color: #222222;
   color: #ffffff;
   width: 100vw;
-  height: 40vh;
+  height: 400px;
   text-align: center;
   font-family: 'Raleway', sans-serif;
-}
-
-@media (max-width:480px) {
-  .sponsorship {
-    height: 55.4vh;
-  }
 }
 
 .sponsorshipHeader {
@@ -189,40 +202,45 @@ Button:focus {
 }
 
 /*------------------------------------DisplayPets----------------------*/
+/*
+@media only screen and (max-width : 1500px) {}
+@media only screen and (max-width : 1200px) {}
+@media only screen and (max-width : 992px) {}
+@media only screen and (max-width : 768px) {}*/
+
+/*
+ * Largest Screens - Everything above 1450px
+ * NOTE: That all of the wrapper widths should be sized to the media query
+ * max width one screen size lower.
+ */
+#wrapper {
+	width: 1500px;
+  padding-top: 5vh;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#columns {
+  margin-top: 50px;
+  column-count: 4;
+}
+
 .thumbnail.pet-card {
-  box-shadow: -2px 4px 10px -1px rgba(0,0,0,.4);
+  display: inline-block;
   -webkit-column-break-inside: avoid;
   -moz-column-break-inside: avoid;
-  /*column-break-inside: avoid;*/
-  margin: 10px;
+  column-break-inside: avoid;
+
+  box-shadow: -2px 4px 10px -1px rgba(0,0,0,.4);
   -webkit-transition: all .2s ease;
   -moz-transition: all .2s ease;
   -o-transition: all .2s ease;
   transition: all .2s ease;
-}
-
-@media screen and (min-width:480px) {
-  .thumbnail.pet-card {
-    padding: 0px;
-    margin-bottom: 20px;
-    width: 400px;
-    margin-top: 10px;
-  }
-}
-
-@media (min-width:1281px) {
-  .thumbnail.pet-card {
-    width: 320px;
-    margin-left: 1.5vw;
-  }
-}
-
-.thumbnail.pet-card {
   background-color: #f2f2f2;
   font-family: 'Raleway', sans-serif;
-  font-weight: bold;
-  font-size: 16px;
+  font-size: 72px;
   text-align: justify;
+  width: 100%;
 }
 
 .thumbnail.pet-card img {
@@ -230,67 +248,71 @@ Button:focus {
   border-radius: 5px;
 }
 
-#wrapper {
-	width: 100vw;
-  padding-top: 10vh;
-}
-
-#columns {
-	column-gap: 0vw;
-  padding-top: 50px;
-  padding-bottom: 20px;
-};
-
-@media (min-width:480px) {
-  #columns {
-    column-count: 1;
-  }
-}
-
-@media (min-width: 820px) {
-  #columns {
-    column-count: 2;
-  }
-}
-
-@media screen and (min-aspect-ratio: 370/665) and (max-aspect-ratio: 1024/1366) {
-  #columns {
-    column-count: 1;
-  }
-  .thumbnail.pet-card {
-    text-align: center;
-    width: 100vw;
-    margin-left: 0px;
-    margin-bottom: 1vh;
-  }
-}
-
-@media (min-width: 1228px) {
-  #columns {
-    column-count: 3;
-  }
-}
-
-@media (min-width:1281px) {
-  #columns{
-    column-count: 4;
-  }
-}
-
-.heart-button {
-  color: red;
-}
-
-#image-gallery-image {
-  max-width: 275px;
-  max-height: 300px;
-  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);
-  border-radius: 5px;
-}
-
+/* modal */
 #card-text {
   font-family: 'Raleway', sans-serif;
   font-weight: bold;
   font-size: 16px;
   text-align: justify;
+}
+
+.progress {
+  background-color: #b6b6b6;
+}
+
+.progress-bar {
+  font-size: 16px;
+  background-color: #d3505d;
+}
+
+ .progress-bar .green-bar {
+  font-size: 16px;
+  background-color: green;
+}
+
+.heart-button {
+  color: #d3505d;
+}
+
+/* Full screen (on a 15" MBP at least) */
+@media only screen and (max-width : 1500px) {
+  #wrapper {
+  	width: 1200px;
+  }
+}
+
+@media only screen and (max-width : 1200px) {
+  #wrapper {
+  	width: 992px;
+  }
+
+  #columns {
+    column-count: 3;
+  }
+}
+
+/* medium & small screens */
+@media only screen and (max-width : 992px) {
+  #wrapper {
+  	width: 90%;
+  }
+
+  #columns {
+    column-count: 1;
+  }
+
+  .thumbnail.pet-card {
+    font-size: 48px;
+  }
+
+  h2 {
+    font-size: 72px;
+  }
+  h4 {
+    font-size: 20px;
+  }
+
+  button.btn {
+    font-size: 20px;
+  }
 }

@@ -52,11 +52,14 @@ class PetCard extends React.Component {
   render() {
     let lgClose = () => this.setState({ lgShow: false });
     let heartButtonClass = this.isFavorite() ? "heart-button" : "";
+    let fullySponsored = this.props.pet.amountSponsored >= 500 ? "green-bar" : "red-bar";
     return(
       <div className="pet-div" key={this.props.pet.name} id={this.props.pet.animalId}>
         <Thumbnail className="pet-card" src={this.props.pet.mainPhoto} alt="Image">
-          <ProgressBar now={this.cardProgressPercentage(this.props.pet.amountSponsored)}
-                       label={`$${this.props.pet.amountSponsored}`} />
+          <div className={fullySponsored}>
+            <ProgressBar now={this.cardProgressPercentage(this.props.pet.amountSponsored)}
+                         label={`$${this.props.pet.amountSponsored}`} />
+          </div>
           <h2>{this.props.pet.name}</h2>
           <h4>Sponsor Me!</h4>
           <ButtonToolbar>

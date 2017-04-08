@@ -260,14 +260,14 @@ Button:focus {
   background-color: #b6b6b6;
 }
 
-.progress-bar {
+.green-bar .progress-bar {
   font-size: 16px;
-  background-color: #d3505d;
+  background-color: #25b38d;
 }
 
- .progress-bar .green-bar {
-  font-size: 16px;
-  background-color: green;
+.red-bar .progress-bar {
+ font-size: 16px;
+ background-color: #d3505d;
 }
 
 .heart-button {

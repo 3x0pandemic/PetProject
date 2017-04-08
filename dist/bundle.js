@@ -8761,7 +8761,7 @@ if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 var store = __webpack_require__(139)('wks'),
     uid = __webpack_require__(101),
-    _Symbol = __webpack_require__(42).Symbol,
+    _Symbol = __webpack_require__(43).Symbol,
     USE_SYMBOL = typeof _Symbol == 'function';
 
 var $exports = module.exports = function (name) {
@@ -9640,392 +9640,6 @@ module.exports = g;
 
 /***/ }),
 /* 40 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function(process) {/**
- * Copyright 2013-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- */
-
-
-
-var _assign = __webpack_require__(15);
-
-var PooledClass = __webpack_require__(55);
-
-var emptyFunction = __webpack_require__(30);
-var warning = __webpack_require__(10);
-
-var didWarnForAddedNewProperty = false;
-var isProxySupported = typeof Proxy === 'function';
-
-var shouldBeReleasedProperties = ['dispatchConfig', '_targetInst', 'nativeEvent', 'isDefaultPrevented', 'isPropagationStopped', '_dispatchListeners', '_dispatchInstances'];
-
-/**
- * @interface Event
- * @see http://www.w3.org/TR/DOM-Level-3-Events/
- */
-var EventInterface = {
-  type: null,
-  target: null,
-  // currentTarget is set when dispatching; no use in copying it here
-  currentTarget: emptyFunction.thatReturnsNull,
-  eventPhase: null,
-  bubbles: null,
-  cancelable: null,
-  timeStamp: function timeStamp(event) {
-    return event.timeStamp || Date.now();
-  },
-  defaultPrevented: null,
-  isTrusted: null
-};
-
-/**
- * Synthetic events are dispatched by event plugins, typically in response to a
- * top-level event delegation handler.
- *
- * These systems should generally use pooling to reduce the frequency of garbage
- * collection. The system should check `isPersistent` to determine whether the
- * event should be released into the pool after being dispatched. Users that
- * need a persisted event should invoke `persist`.
- *
- * Synthetic events (and subclasses) implement the DOM Level 3 Events API by
- * normalizing browser quirks. Subclasses do not necessarily have to implement a
- * DOM interface; custom application-specific events can also subclass this.
- *
- * @param {object} dispatchConfig Configuration used to dispatch this event.
- * @param {*} targetInst Marker identifying the event target.
- * @param {object} nativeEvent Native browser event.
- * @param {DOMEventTarget} nativeEventTarget Target node.
- */
-function SyntheticEvent(dispatchConfig, targetInst, nativeEvent, nativeEventTarget) {
-  if (process.env.NODE_ENV !== 'production') {
-    // these have a getter/setter for warnings
-    delete this.nativeEvent;
-    delete this.preventDefault;
-    delete this.stopPropagation;
-  }
-
-  this.dispatchConfig = dispatchConfig;
-  this._targetInst = targetInst;
-  this.nativeEvent = nativeEvent;
-
-  var Interface = this.constructor.Interface;
-  for (var propName in Interface) {
-    if (!Interface.hasOwnProperty(propName)) {
-      continue;
-    }
-    if (process.env.NODE_ENV !== 'production') {
-      delete this[propName]; // this has a getter/setter for warnings
-    }
-    var normalize = Interface[propName];
-    if (normalize) {
-      this[propName] = normalize(nativeEvent);
-    } else {
-      if (propName === 'target') {
-        this.target = nativeEventTarget;
-      } else {
-        this[propName] = nativeEvent[propName];
-      }
-    }
-  }
-
-  var defaultPrevented = nativeEvent.defaultPrevented != null ? nativeEvent.defaultPrevented : nativeEvent.returnValue === false;
-  if (defaultPrevented) {
-    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
-  } else {
-    this.isDefaultPrevented = emptyFunction.thatReturnsFalse;
-  }
-  this.isPropagationStopped = emptyFunction.thatReturnsFalse;
-  return this;
-}
-
-_assign(SyntheticEvent.prototype, {
-
-  preventDefault: function preventDefault() {
-    this.defaultPrevented = true;
-    var event = this.nativeEvent;
-    if (!event) {
-      return;
-    }
-
-    if (event.preventDefault) {
-      event.preventDefault();
-    } else if (typeof event.returnValue !== 'unknown') {
-      // eslint-disable-line valid-typeof
-      event.returnValue = false;
-    }
-    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
-  },
-
-  stopPropagation: function stopPropagation() {
-    var event = this.nativeEvent;
-    if (!event) {
-      return;
-    }
-
-    if (event.stopPropagation) {
-      event.stopPropagation();
-    } else if (typeof event.cancelBubble !== 'unknown') {
-      // eslint-disable-line valid-typeof
-      // The ChangeEventPlugin registers a "propertychange" event for
-      // IE. This event does not support bubbling or cancelling, and
-      // any references to cancelBubble throw "Member not found".  A
-      // typeof check of "unknown" circumvents this issue (and is also
-      // IE specific).
-      event.cancelBubble = true;
-    }
-
-    this.isPropagationStopped = emptyFunction.thatReturnsTrue;
-  },
-
-  /**
-   * We release all dispatched `SyntheticEvent`s after each event loop, adding
-   * them back into the pool. This allows a way to hold onto a reference that
-   * won't be added back into the pool.
-   */
-  persist: function persist() {
-    this.isPersistent = emptyFunction.thatReturnsTrue;
-  },
-
-  /**
-   * Checks if this event should be released back into the pool.
-   *
-   * @return {boolean} True if this should not be released, false otherwise.
-   */
-  isPersistent: emptyFunction.thatReturnsFalse,
-
-  /**
-   * `PooledClass` looks for `destructor` on each instance it releases.
-   */
-  destructor: function destructor() {
-    var Interface = this.constructor.Interface;
-    for (var propName in Interface) {
-      if (process.env.NODE_ENV !== 'production') {
-        Object.defineProperty(this, propName, getPooledWarningPropertyDefinition(propName, Interface[propName]));
-      } else {
-        this[propName] = null;
-      }
-    }
-    for (var i = 0; i < shouldBeReleasedProperties.length; i++) {
-      this[shouldBeReleasedProperties[i]] = null;
-    }
-    if (process.env.NODE_ENV !== 'production') {
-      Object.defineProperty(this, 'nativeEvent', getPooledWarningPropertyDefinition('nativeEvent', null));
-      Object.defineProperty(this, 'preventDefault', getPooledWarningPropertyDefinition('preventDefault', emptyFunction));
-      Object.defineProperty(this, 'stopPropagation', getPooledWarningPropertyDefinition('stopPropagation', emptyFunction));
-    }
-  }
-
-});
-
-SyntheticEvent.Interface = EventInterface;
-
-if (process.env.NODE_ENV !== 'production') {
-  if (isProxySupported) {
-    /*eslint-disable no-func-assign */
-    SyntheticEvent = new Proxy(SyntheticEvent, {
-      construct: function construct(target, args) {
-        return this.apply(target, Object.create(target.prototype), args);
-      },
-      apply: function apply(constructor, that, args) {
-        return new Proxy(constructor.apply(that, args), {
-          set: function set(target, prop, value) {
-            if (prop !== 'isPersistent' && !target.constructor.Interface.hasOwnProperty(prop) && shouldBeReleasedProperties.indexOf(prop) === -1) {
-              process.env.NODE_ENV !== 'production' ? warning(didWarnForAddedNewProperty || target.isPersistent(), 'This synthetic event is reused for performance reasons. If you\'re ' + 'seeing this, you\'re adding a new property in the synthetic event object. ' + 'The property is never released. See ' + 'https://fb.me/react-event-pooling for more information.') : void 0;
-              didWarnForAddedNewProperty = true;
-            }
-            target[prop] = value;
-            return true;
-          }
-        });
-      }
-    });
-    /*eslint-enable no-func-assign */
-  }
-}
-/**
- * Helper to reduce boilerplate when creating subclasses.
- *
- * @param {function} Class
- * @param {?object} Interface
- */
-SyntheticEvent.augmentClass = function (Class, Interface) {
-  var Super = this;
-
-  var E = function E() {};
-  E.prototype = Super.prototype;
-  var prototype = new E();
-
-  _assign(prototype, Class.prototype);
-  Class.prototype = prototype;
-  Class.prototype.constructor = Class;
-
-  Class.Interface = _assign({}, Super.Interface, Interface);
-  Class.augmentClass = Super.augmentClass;
-
-  PooledClass.addPoolingTo(Class, PooledClass.fourArgumentPooler);
-};
-
-PooledClass.addPoolingTo(SyntheticEvent, PooledClass.fourArgumentPooler);
-
-module.exports = SyntheticEvent;
-
-/**
-  * Helper to nullify syntheticEvent instance properties when destructing
-  *
-  * @param {object} SyntheticEvent
-  * @param {String} propName
-  * @return {object} defineProperty object
-  */
-function getPooledWarningPropertyDefinition(propName, getVal) {
-  var isFunction = typeof getVal === 'function';
-  return {
-    configurable: true,
-    set: set,
-    get: get
-  };
-
-  function set(val) {
-    var action = isFunction ? 'setting the method' : 'setting the property';
-    warn(action, 'This is effectively a no-op');
-    return val;
-  }
-
-  function get() {
-    var action = isFunction ? 'accessing the method' : 'accessing the property';
-    var result = isFunction ? 'This is a no-op function' : 'This is set to null';
-    warn(action, result);
-    return getVal;
-  }
-
-  function warn(action, result) {
-    var warningCondition = false;
-    process.env.NODE_ENV !== 'production' ? warning(warningCondition, 'This synthetic event is reused for performance reasons. If you\'re seeing this, ' + 'you\'re %s `%s` on a released/nullified synthetic event. %s. ' + 'If you must keep the original synthetic event around, use event.persist(). ' + 'See https://fb.me/react-event-pooling for more information.', action, propName, result) : void 0;
-  }
-}
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
-/* 41 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var global = __webpack_require__(42),
-    core = __webpack_require__(32),
-    ctx = __webpack_require__(131),
-    hide = __webpack_require__(62),
-    PROTOTYPE = 'prototype';
-
-var $export = function $export(type, name, source) {
-  var IS_FORCED = type & $export.F,
-      IS_GLOBAL = type & $export.G,
-      IS_STATIC = type & $export.S,
-      IS_PROTO = type & $export.P,
-      IS_BIND = type & $export.B,
-      IS_WRAP = type & $export.W,
-      exports = IS_GLOBAL ? core : core[name] || (core[name] = {}),
-      expProto = exports[PROTOTYPE],
-      target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE],
-      key,
-      own,
-      out;
-  if (IS_GLOBAL) source = name;
-  for (key in source) {
-    // contains in native
-    own = !IS_FORCED && target && target[key] !== undefined;
-    if (own && key in exports) continue;
-    // export native or passed
-    out = own ? target[key] : source[key];
-    // prevent global pollution for namespaces
-    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
-    // bind timers to global for call from export context
-    : IS_BIND && own ? ctx(out, global)
-    // wrap global constructors for prevent change them in library
-    : IS_WRAP && target[key] == out ? function (C) {
-      var F = function F(a, b, c) {
-        if (this instanceof C) {
-          switch (arguments.length) {
-            case 0:
-              return new C();
-            case 1:
-              return new C(a);
-            case 2:
-              return new C(a, b);
-          }return new C(a, b, c);
-        }return C.apply(this, arguments);
-      };
-      F[PROTOTYPE] = C[PROTOTYPE];
-      return F;
-      // make static versions for prototype methods
-    }(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
-    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
-    if (IS_PROTO) {
-      (exports.virtual || (exports.virtual = {}))[key] = out;
-      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
-      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
-    }
-  }
-};
-// type bitmap
-$export.F = 1; // forced
-$export.G = 2; // global
-$export.S = 4; // static
-$export.P = 8; // proto
-$export.B = 16; // bind
-$export.W = 32; // wrap
-$export.U = 64; // safe
-$export.R = 128; // real proto method for `library` 
-module.exports = $export;
-
-/***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
-var global = module.exports = typeof window != 'undefined' && window.Math == Math ? window : typeof self != 'undefined' && self.Math == Math ? self : Function('return this')();
-if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
-
-/***/ }),
-/* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-// to indexed object, toObject with fallback for non-array-like ES3 strings
-var IObject = __webpack_require__(205),
-    defined = __webpack_require__(132);
-module.exports = function (it) {
-  return IObject(defined(it));
-};
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
-module.exports = exports['default'];
-
-/***/ }),
-/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11126,6 +10740,392 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 });
 ;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(125)(module)))
+
+/***/ }),
+/* 41 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(process) {/**
+ * Copyright 2013-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ */
+
+
+
+var _assign = __webpack_require__(15);
+
+var PooledClass = __webpack_require__(55);
+
+var emptyFunction = __webpack_require__(30);
+var warning = __webpack_require__(10);
+
+var didWarnForAddedNewProperty = false;
+var isProxySupported = typeof Proxy === 'function';
+
+var shouldBeReleasedProperties = ['dispatchConfig', '_targetInst', 'nativeEvent', 'isDefaultPrevented', 'isPropagationStopped', '_dispatchListeners', '_dispatchInstances'];
+
+/**
+ * @interface Event
+ * @see http://www.w3.org/TR/DOM-Level-3-Events/
+ */
+var EventInterface = {
+  type: null,
+  target: null,
+  // currentTarget is set when dispatching; no use in copying it here
+  currentTarget: emptyFunction.thatReturnsNull,
+  eventPhase: null,
+  bubbles: null,
+  cancelable: null,
+  timeStamp: function timeStamp(event) {
+    return event.timeStamp || Date.now();
+  },
+  defaultPrevented: null,
+  isTrusted: null
+};
+
+/**
+ * Synthetic events are dispatched by event plugins, typically in response to a
+ * top-level event delegation handler.
+ *
+ * These systems should generally use pooling to reduce the frequency of garbage
+ * collection. The system should check `isPersistent` to determine whether the
+ * event should be released into the pool after being dispatched. Users that
+ * need a persisted event should invoke `persist`.
+ *
+ * Synthetic events (and subclasses) implement the DOM Level 3 Events API by
+ * normalizing browser quirks. Subclasses do not necessarily have to implement a
+ * DOM interface; custom application-specific events can also subclass this.
+ *
+ * @param {object} dispatchConfig Configuration used to dispatch this event.
+ * @param {*} targetInst Marker identifying the event target.
+ * @param {object} nativeEvent Native browser event.
+ * @param {DOMEventTarget} nativeEventTarget Target node.
+ */
+function SyntheticEvent(dispatchConfig, targetInst, nativeEvent, nativeEventTarget) {
+  if (process.env.NODE_ENV !== 'production') {
+    // these have a getter/setter for warnings
+    delete this.nativeEvent;
+    delete this.preventDefault;
+    delete this.stopPropagation;
+  }
+
+  this.dispatchConfig = dispatchConfig;
+  this._targetInst = targetInst;
+  this.nativeEvent = nativeEvent;
+
+  var Interface = this.constructor.Interface;
+  for (var propName in Interface) {
+    if (!Interface.hasOwnProperty(propName)) {
+      continue;
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      delete this[propName]; // this has a getter/setter for warnings
+    }
+    var normalize = Interface[propName];
+    if (normalize) {
+      this[propName] = normalize(nativeEvent);
+    } else {
+      if (propName === 'target') {
+        this.target = nativeEventTarget;
+      } else {
+        this[propName] = nativeEvent[propName];
+      }
+    }
+  }
+
+  var defaultPrevented = nativeEvent.defaultPrevented != null ? nativeEvent.defaultPrevented : nativeEvent.returnValue === false;
+  if (defaultPrevented) {
+    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
+  } else {
+    this.isDefaultPrevented = emptyFunction.thatReturnsFalse;
+  }
+  this.isPropagationStopped = emptyFunction.thatReturnsFalse;
+  return this;
+}
+
+_assign(SyntheticEvent.prototype, {
+
+  preventDefault: function preventDefault() {
+    this.defaultPrevented = true;
+    var event = this.nativeEvent;
+    if (!event) {
+      return;
+    }
+
+    if (event.preventDefault) {
+      event.preventDefault();
+    } else if (typeof event.returnValue !== 'unknown') {
+      // eslint-disable-line valid-typeof
+      event.returnValue = false;
+    }
+    this.isDefaultPrevented = emptyFunction.thatReturnsTrue;
+  },
+
+  stopPropagation: function stopPropagation() {
+    var event = this.nativeEvent;
+    if (!event) {
+      return;
+    }
+
+    if (event.stopPropagation) {
+      event.stopPropagation();
+    } else if (typeof event.cancelBubble !== 'unknown') {
+      // eslint-disable-line valid-typeof
+      // The ChangeEventPlugin registers a "propertychange" event for
+      // IE. This event does not support bubbling or cancelling, and
+      // any references to cancelBubble throw "Member not found".  A
+      // typeof check of "unknown" circumvents this issue (and is also
+      // IE specific).
+      event.cancelBubble = true;
+    }
+
+    this.isPropagationStopped = emptyFunction.thatReturnsTrue;
+  },
+
+  /**
+   * We release all dispatched `SyntheticEvent`s after each event loop, adding
+   * them back into the pool. This allows a way to hold onto a reference that
+   * won't be added back into the pool.
+   */
+  persist: function persist() {
+    this.isPersistent = emptyFunction.thatReturnsTrue;
+  },
+
+  /**
+   * Checks if this event should be released back into the pool.
+   *
+   * @return {boolean} True if this should not be released, false otherwise.
+   */
+  isPersistent: emptyFunction.thatReturnsFalse,
+
+  /**
+   * `PooledClass` looks for `destructor` on each instance it releases.
+   */
+  destructor: function destructor() {
+    var Interface = this.constructor.Interface;
+    for (var propName in Interface) {
+      if (process.env.NODE_ENV !== 'production') {
+        Object.defineProperty(this, propName, getPooledWarningPropertyDefinition(propName, Interface[propName]));
+      } else {
+        this[propName] = null;
+      }
+    }
+    for (var i = 0; i < shouldBeReleasedProperties.length; i++) {
+      this[shouldBeReleasedProperties[i]] = null;
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      Object.defineProperty(this, 'nativeEvent', getPooledWarningPropertyDefinition('nativeEvent', null));
+      Object.defineProperty(this, 'preventDefault', getPooledWarningPropertyDefinition('preventDefault', emptyFunction));
+      Object.defineProperty(this, 'stopPropagation', getPooledWarningPropertyDefinition('stopPropagation', emptyFunction));
+    }
+  }
+
+});
+
+SyntheticEvent.Interface = EventInterface;
+
+if (process.env.NODE_ENV !== 'production') {
+  if (isProxySupported) {
+    /*eslint-disable no-func-assign */
+    SyntheticEvent = new Proxy(SyntheticEvent, {
+      construct: function construct(target, args) {
+        return this.apply(target, Object.create(target.prototype), args);
+      },
+      apply: function apply(constructor, that, args) {
+        return new Proxy(constructor.apply(that, args), {
+          set: function set(target, prop, value) {
+            if (prop !== 'isPersistent' && !target.constructor.Interface.hasOwnProperty(prop) && shouldBeReleasedProperties.indexOf(prop) === -1) {
+              process.env.NODE_ENV !== 'production' ? warning(didWarnForAddedNewProperty || target.isPersistent(), 'This synthetic event is reused for performance reasons. If you\'re ' + 'seeing this, you\'re adding a new property in the synthetic event object. ' + 'The property is never released. See ' + 'https://fb.me/react-event-pooling for more information.') : void 0;
+              didWarnForAddedNewProperty = true;
+            }
+            target[prop] = value;
+            return true;
+          }
+        });
+      }
+    });
+    /*eslint-enable no-func-assign */
+  }
+}
+/**
+ * Helper to reduce boilerplate when creating subclasses.
+ *
+ * @param {function} Class
+ * @param {?object} Interface
+ */
+SyntheticEvent.augmentClass = function (Class, Interface) {
+  var Super = this;
+
+  var E = function E() {};
+  E.prototype = Super.prototype;
+  var prototype = new E();
+
+  _assign(prototype, Class.prototype);
+  Class.prototype = prototype;
+  Class.prototype.constructor = Class;
+
+  Class.Interface = _assign({}, Super.Interface, Interface);
+  Class.augmentClass = Super.augmentClass;
+
+  PooledClass.addPoolingTo(Class, PooledClass.fourArgumentPooler);
+};
+
+PooledClass.addPoolingTo(SyntheticEvent, PooledClass.fourArgumentPooler);
+
+module.exports = SyntheticEvent;
+
+/**
+  * Helper to nullify syntheticEvent instance properties when destructing
+  *
+  * @param {object} SyntheticEvent
+  * @param {String} propName
+  * @return {object} defineProperty object
+  */
+function getPooledWarningPropertyDefinition(propName, getVal) {
+  var isFunction = typeof getVal === 'function';
+  return {
+    configurable: true,
+    set: set,
+    get: get
+  };
+
+  function set(val) {
+    var action = isFunction ? 'setting the method' : 'setting the property';
+    warn(action, 'This is effectively a no-op');
+    return val;
+  }
+
+  function get() {
+    var action = isFunction ? 'accessing the method' : 'accessing the property';
+    var result = isFunction ? 'This is a no-op function' : 'This is set to null';
+    warn(action, result);
+    return getVal;
+  }
+
+  function warn(action, result) {
+    var warningCondition = false;
+    process.env.NODE_ENV !== 'production' ? warning(warningCondition, 'This synthetic event is reused for performance reasons. If you\'re seeing this, ' + 'you\'re %s `%s` on a released/nullified synthetic event. %s. ' + 'If you must keep the original synthetic event around, use event.persist(). ' + 'See https://fb.me/react-event-pooling for more information.', action, propName, result) : void 0;
+  }
+}
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
+
+/***/ }),
+/* 42 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var global = __webpack_require__(43),
+    core = __webpack_require__(32),
+    ctx = __webpack_require__(131),
+    hide = __webpack_require__(62),
+    PROTOTYPE = 'prototype';
+
+var $export = function $export(type, name, source) {
+  var IS_FORCED = type & $export.F,
+      IS_GLOBAL = type & $export.G,
+      IS_STATIC = type & $export.S,
+      IS_PROTO = type & $export.P,
+      IS_BIND = type & $export.B,
+      IS_WRAP = type & $export.W,
+      exports = IS_GLOBAL ? core : core[name] || (core[name] = {}),
+      expProto = exports[PROTOTYPE],
+      target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE],
+      key,
+      own,
+      out;
+  if (IS_GLOBAL) source = name;
+  for (key in source) {
+    // contains in native
+    own = !IS_FORCED && target && target[key] !== undefined;
+    if (own && key in exports) continue;
+    // export native or passed
+    out = own ? target[key] : source[key];
+    // prevent global pollution for namespaces
+    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
+    // bind timers to global for call from export context
+    : IS_BIND && own ? ctx(out, global)
+    // wrap global constructors for prevent change them in library
+    : IS_WRAP && target[key] == out ? function (C) {
+      var F = function F(a, b, c) {
+        if (this instanceof C) {
+          switch (arguments.length) {
+            case 0:
+              return new C();
+            case 1:
+              return new C(a);
+            case 2:
+              return new C(a, b);
+          }return new C(a, b, c);
+        }return C.apply(this, arguments);
+      };
+      F[PROTOTYPE] = C[PROTOTYPE];
+      return F;
+      // make static versions for prototype methods
+    }(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
+    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
+    if (IS_PROTO) {
+      (exports.virtual || (exports.virtual = {}))[key] = out;
+      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
+      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
+    }
+  }
+};
+// type bitmap
+$export.F = 1; // forced
+$export.G = 2; // global
+$export.S = 4; // static
+$export.P = 8; // proto
+$export.B = 16; // bind
+$export.W = 32; // wrap
+$export.U = 64; // safe
+$export.R = 128; // real proto method for `library` 
+module.exports = $export;
+
+/***/ }),
+/* 43 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
+var global = module.exports = typeof window != 'undefined' && window.Math == Math ? window : typeof self != 'undefined' && self.Math == Math ? self : Function('return this')();
+if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
+
+/***/ }),
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+// to indexed object, toObject with fallback for non-array-like ES3 strings
+var IObject = __webpack_require__(205),
+    defined = __webpack_require__(132);
+module.exports = function (it) {
+  return IObject(defined(it));
+};
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+module.exports = exports['default'];
 
 /***/ }),
 /* 46 */
@@ -12745,7 +12745,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -15732,7 +15732,7 @@ module.exports = ReactInstanceMap;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 var getEventTarget = __webpack_require__(182);
 
@@ -18434,7 +18434,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -21770,7 +21770,7 @@ module.exports = function (key) {
 "use strict";
 
 
-var global = __webpack_require__(42),
+var global = __webpack_require__(43),
     SHARED = '__core-js_shared__',
     store = global[SHARED] || (global[SHARED] = {});
 module.exports = function (key) {
@@ -21831,7 +21831,7 @@ module.exports = function (it, S) {
 "use strict";
 
 
-var global = __webpack_require__(42),
+var global = __webpack_require__(43),
     core = __webpack_require__(32),
     LIBRARY = __webpack_require__(134),
     wksExt = __webpack_require__(144),
@@ -21943,7 +21943,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -32365,7 +32365,7 @@ var _react = __webpack_require__(1);
 
 var _react2 = _interopRequireDefault(_react);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -32964,7 +32964,7 @@ if (typeof global.Map !== 'undefined') {
 
 
 var isObject = __webpack_require__(76),
-    document = __webpack_require__(42).document
+    document = __webpack_require__(43).document
 // in old IE typeof document.createElement is 'object'
 ,
     is = isObject(document) && isObject(document.createElement);
@@ -33006,7 +33006,7 @@ module.exports = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
 
 
 var LIBRARY = __webpack_require__(134),
-    $export = __webpack_require__(41),
+    $export = __webpack_require__(42),
     redefine = __webpack_require__(211),
     hide = __webpack_require__(62),
     has = __webpack_require__(50),
@@ -33099,7 +33099,7 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
 
 var pIE = __webpack_require__(78),
     createDesc = __webpack_require__(79),
-    toIObject = __webpack_require__(43),
+    toIObject = __webpack_require__(44),
     toPrimitive = __webpack_require__(142),
     has = __webpack_require__(50),
     IE8_DOM_DEFINE = __webpack_require__(204),
@@ -33137,7 +33137,7 @@ exports.f = Object.getOwnPropertyNames || function getOwnPropertyNames(O) {
 
 
 var has = __webpack_require__(50),
-    toIObject = __webpack_require__(43),
+    toIObject = __webpack_require__(44),
     arrayIndexOf = __webpack_require__(346)(false),
     IE_PROTO = __webpack_require__(138)('IE_PROTO');
 
@@ -33164,7 +33164,7 @@ module.exports = function (object, names) {
 
 
 var getKeys = __webpack_require__(63),
-    toIObject = __webpack_require__(43),
+    toIObject = __webpack_require__(44),
     isEnum = __webpack_require__(78).f;
 module.exports = function (isEntries) {
   return function (it) {
@@ -33368,7 +33368,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.animationEnd = exports.animationDelay = exports.animationTiming = exports.animationDuration = exports.animationName = exports.transitionEnd = exports.transitionDuration = exports.transitionDelay = exports.transitionTiming = exports.transitionProperty = exports.transform = undefined;
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -33533,7 +33533,7 @@ exports.default = function (recalc) {
   return size;
 };
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -43920,7 +43920,7 @@ var _react = __webpack_require__(1);
 
 var _react2 = _interopRequireDefault(_react);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 var _UserStore = __webpack_require__(670);
 
@@ -51643,7 +51643,7 @@ module.exports = function () {/* empty */};
 
 // false -> Array#indexOf
 // true  -> Array#includes
-var toIObject = __webpack_require__(43),
+var toIObject = __webpack_require__(44),
     toLength = __webpack_require__(212),
     toIndex = __webpack_require__(365);
 module.exports = function (IS_INCLUDES) {
@@ -51745,7 +51745,7 @@ module.exports = function (it) {
 "use strict";
 
 
-module.exports = __webpack_require__(42).document && document.documentElement;
+module.exports = __webpack_require__(43).document && document.documentElement;
 
 /***/ }),
 /* 351 */
@@ -51874,7 +51874,7 @@ module.exports = function (done, value) {
 
 
 var getKeys = __webpack_require__(63),
-    toIObject = __webpack_require__(43);
+    toIObject = __webpack_require__(44);
 module.exports = function (object, el) {
   var O = toIObject(object),
       keys = getKeys(O),
@@ -52026,7 +52026,7 @@ module.exports = __webpack_require__(61) ? Object.defineProperties : function de
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 // fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
-var toIObject = __webpack_require__(43),
+var toIObject = __webpack_require__(44),
     gOPN = __webpack_require__(208).f,
     toString = {}.toString;
 
@@ -52160,7 +52160,7 @@ module.exports = __webpack_require__(32).getIteratorMethod = function (it) {
 
 
 var ctx = __webpack_require__(131),
-    $export = __webpack_require__(41),
+    $export = __webpack_require__(42),
     toObject = __webpack_require__(141),
     call = __webpack_require__(353),
     isArrayIter = __webpack_require__(351),
@@ -52211,7 +52211,7 @@ $export($export.S + $export.F * !__webpack_require__(355)(function (iter) {
 var addToUnscopables = __webpack_require__(345),
     step = __webpack_require__(356),
     Iterators = __webpack_require__(77),
-    toIObject = __webpack_require__(43);
+    toIObject = __webpack_require__(44);
 
 // 22.1.3.4 Array.prototype.entries()
 // 22.1.3.13 Array.prototype.keys()
@@ -52250,7 +52250,7 @@ addToUnscopables('entries');
 
 
 // 19.1.3.1 Object.assign(target, source)
-var $export = __webpack_require__(41);
+var $export = __webpack_require__(42);
 
 $export($export.S + $export.F, 'Object', { assign: __webpack_require__(359) });
 
@@ -52261,7 +52261,7 @@ $export($export.S + $export.F, 'Object', { assign: __webpack_require__(359) });
 "use strict";
 
 
-var $export = __webpack_require__(41);
+var $export = __webpack_require__(42);
 // 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
 $export($export.S, 'Object', { create: __webpack_require__(135) });
 
@@ -52273,7 +52273,7 @@ $export($export.S, 'Object', { create: __webpack_require__(135) });
 
 
 // 19.1.3.19 Object.setPrototypeOf(O, proto)
-var $export = __webpack_require__(41);
+var $export = __webpack_require__(42);
 $export($export.S, 'Object', { setPrototypeOf: __webpack_require__(363).set });
 
 /***/ }),
@@ -52293,10 +52293,10 @@ $export($export.S, 'Object', { setPrototypeOf: __webpack_require__(363).set });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var global = __webpack_require__(42),
+var global = __webpack_require__(43),
     has = __webpack_require__(50),
     DESCRIPTORS = __webpack_require__(61),
-    $export = __webpack_require__(41),
+    $export = __webpack_require__(42),
     redefine = __webpack_require__(211),
     META = __webpack_require__(358).KEY,
     $fails = __webpack_require__(75),
@@ -52310,7 +52310,7 @@ var global = __webpack_require__(42),
     enumKeys = __webpack_require__(349),
     isArray = __webpack_require__(352),
     anObject = __webpack_require__(60),
-    toIObject = __webpack_require__(43),
+    toIObject = __webpack_require__(44),
     toPrimitive = __webpack_require__(142),
     createDesc = __webpack_require__(79),
     _create = __webpack_require__(135),
@@ -52541,7 +52541,7 @@ setToStringTag(global.JSON, 'JSON', true);
 
 
 // https://github.com/tc39/proposal-object-values-entries
-var $export = __webpack_require__(41),
+var $export = __webpack_require__(42),
     $entries = __webpack_require__(210)(true);
 
 $export($export.S, 'Object', {
@@ -52558,7 +52558,7 @@ $export($export.S, 'Object', {
 
 
 // https://github.com/tc39/proposal-object-values-entries
-var $export = __webpack_require__(41),
+var $export = __webpack_require__(42),
     $values = __webpack_require__(210)(false);
 
 $export($export.S, 'Object', {
@@ -52593,7 +52593,7 @@ __webpack_require__(143)('observable');
 
 
 __webpack_require__(368);
-var global = __webpack_require__(42),
+var global = __webpack_require__(43),
     hide = __webpack_require__(62),
     Iterators = __webpack_require__(77),
     TO_STRING_TAG = __webpack_require__(33)('toStringTag');
@@ -52904,7 +52904,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -67380,7 +67380,7 @@ var _ownerDocument = __webpack_require__(64);
 
 var _ownerDocument2 = _interopRequireDefault(_ownerDocument);
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -72245,7 +72245,7 @@ var EventPropagators = __webpack_require__(84);
 var ExecutionEnvironment = __webpack_require__(20);
 var ReactDOMComponentTree = __webpack_require__(16);
 var ReactUpdates = __webpack_require__(37);
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 var getEventTarget = __webpack_require__(182);
 var isEventSupported = __webpack_require__(183);
@@ -79214,7 +79214,7 @@ var EventPropagators = __webpack_require__(84);
 var ExecutionEnvironment = __webpack_require__(20);
 var ReactDOMComponentTree = __webpack_require__(16);
 var ReactInputSelection = __webpack_require__(278);
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 var getActiveElement = __webpack_require__(223);
 var isTextInputElement = __webpack_require__(288);
@@ -79414,7 +79414,7 @@ var EventPropagators = __webpack_require__(84);
 var ReactDOMComponentTree = __webpack_require__(16);
 var SyntheticAnimationEvent = __webpack_require__(592);
 var SyntheticClipboardEvent = __webpack_require__(593);
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 var SyntheticFocusEvent = __webpack_require__(596);
 var SyntheticKeyboardEvent = __webpack_require__(598);
 var SyntheticMouseEvent = __webpack_require__(114);
@@ -79640,7 +79640,7 @@ module.exports = SimpleEventPlugin;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 /**
  * @interface Event
@@ -79684,7 +79684,7 @@ module.exports = SyntheticAnimationEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 /**
  * @interface Event
@@ -79727,7 +79727,7 @@ module.exports = SyntheticClipboardEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 /**
  * @interface Event
@@ -79850,7 +79850,7 @@ module.exports = SyntheticFocusEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 /**
  * @interface Event
@@ -80031,7 +80031,7 @@ module.exports = SyntheticTouchEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(40);
+var SyntheticEvent = __webpack_require__(41);
 
 /**
  * @interface Event
@@ -80969,7 +80969,7 @@ var _addFocusListener = __webpack_require__(618);
 
 var _addFocusListener2 = _interopRequireDefault(_addFocusListener);
 
-var _inDOM = __webpack_require__(44);
+var _inDOM = __webpack_require__(45);
 
 var _inDOM2 = _interopRequireDefault(_inDOM);
 
@@ -87034,7 +87034,7 @@ var _DisplayPets2 = _interopRequireDefault(_DisplayPets);
 
 var _reactBootstrap = __webpack_require__(36);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87094,7 +87094,7 @@ var _DisplayPets2 = __webpack_require__(48);
 
 var _DisplayPets3 = _interopRequireDefault(_DisplayPets2);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87136,7 +87136,7 @@ var _DisplayPets2 = __webpack_require__(48);
 
 var _DisplayPets3 = _interopRequireDefault(_DisplayPets2);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87178,7 +87178,7 @@ var _DisplayPets2 = __webpack_require__(48);
 
 var _DisplayPets3 = _interopRequireDefault(_DisplayPets2);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87347,7 +87347,7 @@ var _reactBootstrap = __webpack_require__(36);
 
 var _reactRouter = __webpack_require__(123);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87497,7 +87497,7 @@ var _PopUpPet = __webpack_require__(309);
 
 var _PopUpPet2 = _interopRequireDefault(_PopUpPet);
 
-var _mobxReact = __webpack_require__(45);
+var _mobxReact = __webpack_require__(40);
 
 var _reactBootstrap = __webpack_require__(36);
 
@@ -87799,6 +87799,8 @@ var _react = __webpack_require__(1);
 
 var _react2 = _interopRequireDefault(_react);
 
+var _mobxReact = __webpack_require__(40);
+
 var _reactBootstrap = __webpack_require__(36);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -87819,7 +87821,8 @@ var Sponsorship = function (_React$Component) {
 
     _this.state = {
       amountSponsored: 0,
-      amountInDb: _this.props.pet.amountSponsored
+      amountInDb: _this.props.pet.amountSponsored,
+      moneySent: false
     };
     _this.handleAmountSponsoredChange = _this.handleAmountSponsoredChange.bind(_this);
     _this.submitHandler = _this.submitHandler.bind(_this);
@@ -87839,6 +87842,7 @@ var Sponsorship = function (_React$Component) {
     value: function submitHandler(e) {
       e.preventDefault();
       this.sponsorPet(this.state.amountSponsored, this.props.pet.animalId);
+      this.setState({ moneySent: true });
     }
   }, {
     key: 'sponsorPet',
@@ -87862,14 +87866,29 @@ var Sponsorship = function (_React$Component) {
   }, {
     key: 'render',
     value: function render() {
-
+      var fullySponsored = this.props.pet.amountSponsored === 500 ? "green-bar" : "";
+      if (this.state.moneySent) {
+        return _react2.default.createElement(
+          'div',
+          null,
+          _react2.default.createElement(
+            'h3',
+            null,
+            'Thanks FUR your donation! ',
+            _react2.default.createElement('br', null),
+            _react2.default.createElement('br', null),
+            ' \u2014',
+            this.props.pet.name
+          )
+        );
+      }
       return _react2.default.createElement(
         'div',
         null,
         _react2.default.createElement('br', null),
-        _react2.default.createElement(_reactBootstrap.ProgressBar, { now: this.progressPercentage(parseInt(this.state.amountSponsored) + parseInt(this.state.amountInDb)),
+        _react2.default.createElement(_reactBootstrap.ProgressBar, { className: fullySponsored, now: this.progressPercentage(parseInt(this.state.amountSponsored) + parseInt(this.state.amountInDb)),
           label: '$' + (parseInt(this.state.amountSponsored) + parseInt(this.state.amountInDb)) }),
-        _react2.default.createElement(
+        this.props.userStore.loggedIn ? _react2.default.createElement(
           'form',
           null,
           _react2.default.createElement('input', { onChange: this.handleAmountSponsoredChange, type: 'email', name: 'email',
@@ -87881,7 +87900,7 @@ var Sponsorship = function (_React$Component) {
             { onClick: this.submitHandler, type: 'submit' },
             'Sponsor'
           )
-        )
+        ) : "Login to help sponsor " + this.props.pet.name
       );
     }
   }]);
@@ -87890,10 +87909,11 @@ var Sponsorship = function (_React$Component) {
 }(_react2.default.Component);
 
 Sponsorship.propTypes = {
-  pet: _react2.default.PropTypes.object
+  pet: _react2.default.PropTypes.object,
+  userStore: _react2.default.PropTypes.object
 };
 
-exports.default = Sponsorship;
+exports.default = (0, _mobxReact.inject)("userStore")((0, _mobxReact.observer)(Sponsorship));
 
 /***/ }),
 /* 670 */
@@ -88066,7 +88086,7 @@ exports = module.exports = __webpack_require__(145)(undefined);
 
 
 // module
-exports.push([module.i, "\nbody {\n  /*display: inline-grid;*/\n  background-color: #dbdbdb;\n  background-size: 100%;\n}\n\n.navbar .container {\n  margin: 0px;\n}\n\n.navbar-right {\n  margin-right: -17vw;\n}\n\n.navbar-brand {\n  position: absolute;\n  /*overflow: hidden;*/\n  max-width: 420px;\n  padding-top: 1vh;\n  padding-bottom: 0;\n}\n\n@media (max-width:480px) {\n  .navbar-brand {\n    max-width: 80vw;\n  }\n}\n\n.Navbar {\n  position: fixed;\n  width: 100%;\n  z-index: 20;\n  margin-top: 0px;\n  padding-top: 0px;\n  font-family: 'Raleway', sans-serif;\n}\n\n.navButton {\n  background-color: white;\n  color: black;\n}\n\n.navButton:hover {\n  background-color: black;\n}\n\nButton:active {\n  background-color: white;\n}\n\nButton:focus {\n  background-color: white;\n}\n\n.navLinks {\n  margin-top: 1vh;\n}\n\n.dogContainer {\n  width: 100vw;\n  height: 100%;\n}\n\n.homeContainer {\n  overflow: hidden;\n  background-size: cover;\n  width: 100%;\n  margin: 0%;\n  padding: 0%;\n}\n\n.header {\n  -webkit-transition: transform 3s ease-in-out;\n  background: url(/images/logo3.png) no-repeat, url(/images/dogsrunning2.jpg) no-repeat;\n  background-size: 300px, cover;\n  background-position: center;\n  position: relative;\n  width: 100vw;\n  height: 100vh;\n  margin-top: -20px;\n  font-family: 'Raleway', sans-serif;\n  text-align: center;\n  color: white;\n  background-attachment: fixed\n}\n\n@media (max-width:480px) {\n  .header {\n    background: url(/images/logo3.png) no-repeat, url(/images/dogsrunningcropped.jpg) no-repeat;\n    background-size: 250px, cover;\n    background-position: center;\n  }\n}\n\n.header img {\n  max-width: 100%;\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n}\n\n.header:hover {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n}\n\n.words {\n  line-height: 70vh;\n}\n\n.homediv1 {\n  background: url(/images/Dogshover.jpg) no-repeat;\n  background-position: right;\n  display:block;\n  margin: 3%;\n  overflow: hidden;\n  font-family: 'Raleway', sans-serif;\n  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);\n  -webkit-transition: transform .5s ease-in-out;\n}\n\n.homediv1 img {\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n  opacity: 0.8;\n}\n\n/*---------------------------------------------div to work on------------------------------------*/\n/*.child {\n  z-index: 999;\n  display: none;\n}\n\n.homediv1:hover .child {\n  display: block;\n  text-align: center;\n}*/\n/*------------------------------------------------end-----------------------------------------*/\n.homediv1:hover img {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n  opacity: 1;\n  transition: 1s;\n}\n\n.homediv2 {\n  background: url(/images/Catshover.jpg) no-repeat;\n  background-position: left;\n  display:block;\n  margin: 3%;\n  font-family: 'Raleway', sans-serif;\n  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);\n  -webkit-transition: transform .5s ease-in-out;\n}\n\n.homediv2 img {\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n  opacity: 0.8;\n}\n\n.homediv2:hover img {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n  opacity: 1;\n  transition: 1s;\n}\n\n.sponsorship {\n  background-color: #222222;\n  color: #ffffff;\n  width: 100vw;\n  height: 40vh;\n  text-align: center;\n  font-family: 'Raleway', sans-serif;\n}\n\n@media (max-width:480px) {\n  .sponsorship {\n    height: 55.4vh;\n  }\n}\n\n.sponsorshipHeader {\n  line-height: 10vh;\n  font-family: 'Raleway', sans-serif;\n}\n\n/*------------------------------------DisplayPets----------------------*/\n.thumbnail.pet-card {\n  box-shadow: -2px 4px 10px -1px rgba(0,0,0,.4);\n  -webkit-column-break-inside: avoid;\n  -moz-column-break-inside: avoid;\n  /*column-break-inside: avoid;*/\n  margin: 10px;\n  -webkit-transition: all .2s ease;\n  -moz-transition: all .2s ease;\n  -o-transition: all .2s ease;\n  transition: all .2s ease;\n}\n\n@media screen and (min-width:480px) {\n  .thumbnail.pet-card {\n    padding: 0px;\n    margin-bottom: 20px;\n    width: 400px;\n    margin-top: 10px;\n  }\n}\n\n@media (min-width:1281px) {\n  .thumbnail.pet-card {\n    width: 320px;\n    margin-left: 1.5vw;\n  }\n}\n\n.thumbnail.pet-card {\n  background-color: #f2f2f2;\n  font-family: 'Raleway', sans-serif;\n  font-weight: bold;\n  font-size: 16px;\n  text-align: justify;\n}\n\n.thumbnail.pet-card img {\n  width: 100%;\n  border-radius: 5px;\n}\n\n#wrapper {\n\twidth: 100%;\n  padding-top: 10vh;\n}\n\n#columns {\n\tcolumn-gap: 0vw;\n  padding-top: 50px;\n  padding-bottom: 20px;\n};\n\n@media (min-width:480px) {\n  #columns {\n    column-count: 1;\n  }\n}\n\n@media (min-width: 820px) {\n  #columns {\n    column-count: 2;\n  }\n}\n\n@media screen and (min-aspect-ratio: 370/665) and (max-aspect-ratio: 1024/1366) {\n  #columns {\n    column-count: 1;\n  }\n  .thumbnail.pet-card {\n    width: 100vw;\n    margin-left: 0px;\n    margin-bottom: 1vh;\n  }\n  .navbar-header {\n      float: none;\n  }\n  .navbar-left,.navbar-right {\n      float: none !important;\n  }\n  .navbar-toggle {\n      display: block;\n      margin-right: -14vw;\n      margin-top: 2vh;\n  }\n  .navbar-collapse {\n      border-top: 1px solid transparent;\n      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);\n  }\n  /*.navbar-fixed-top {\n      top: 0;\n      border-width: 0 0 1px;\n  }*/\n  .navbar-collapse.collapse {\n      display: none!important;\n  }\n  .navbar-nav {\n      float: none!important;\n      margin-top: 7.5px;\n  }\n  .navbar-nav>li {\n      float: none;\n  }\n  .navbar-nav>li>a {\n      padding-top: 10px;\n      padding-bottom: 10px;\n  }\n  .collapse.in{\n      display:block !important;\n  }\n\n}\n\n\n@media (min-width: 1228px) {\n  #columns {\n    column-count: 3;\n  }\n}\n\n@media (min-width:1281px) {\n  #columns{\n    column-count: 4;\n  }\n}\n\n.heart-button {\n  color: red;\n}\n\n#image-gallery-image {\n  max-width: 275px;\n  max-height: 300px;\n  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);\n  border-radius: 5px;\n}\n\n#card-text {\n  font-family: 'Raleway', sans-serif;\n  font-weight: bold;\n  font-size: 16px;\n  text-align: justify;\n}\n", ""]);
+exports.push([module.i, "\nbody {\n  background-color: #dbdbdb;\n  background-size: 100%;\n}\n\n.navbar {\n  border-radius: 0px;\n}\n\n.navbar a {\n  font-size: 16px;\n  color: white;\n}\n.navbar a:hover {\n  color: white;\n  text-decoration: none;\n}\n\n.navbar .container {\n  width: 100%;\n}\n\n.navbar-brand {\n  position: absolute;\n  max-width: 420px;\n  padding-top: 1vh;\n  padding-bottom: 0;\n}\n\n@media (max-width:480px) {\n  .navbar-brand {\n    max-width: 80vw;\n  }\n}\n\n.Navbar {\n  position: fixed;\n  width: 100%;\n  z-index: 20;\n  margin-top: 0px;\n  padding-top: 0px;\n  font-family: 'Raleway', sans-serif;\n}\n\n.navButton {\n  background-color: white;\n  color: black;\n}\n\n.navButton:hover {\n  background-color: black;\n}\n\nButton:active {\n  background-color: white;\n}\n\nButton:focus {\n  background-color: white;\n}\n\n.navLinks {\n  margin-top: 1vh;\n}\n\n/* Make the collapsed navbar show up on a larger screen size than\n * bootstrap's default\n * http://stackoverflow.com/questions/21076922/bootstrap-how-to-collapse-navbar-earlier\n */\n@media only screen and (max-width : 992px) {\n  .navbar-collapse.collapse {\n    display: none !important;\n  }\n  .navbar-collapse.collapse.in {\n    display: block !important;\n  }\n  .navbar-header .collapse, .navbar-toggle {\n    display:block !important;\n  }\n  .navbar-header {\n    float:none;\n  }\n}\n\n.dogContainer {\n  width: 100vw;\n  height: 100%;\n}\n\n.homeContainer {\n  overflow: hidden;\n  background-size: cover;\n  width: 100%;\n  margin: 0%;\n  padding: 0%;\n}\n\n.header {\n  -webkit-transition: transform 3s ease-in-out;\n  background: url(/images/logo3.png) no-repeat, url(/images/dogsrunning2.jpg) no-repeat;\n  background-size: 300px, cover;\n  background-position: center;\n  position: relative;\n  width: 100vw;\n  height: 100vh;\n  margin-top: -20px;\n  font-family: 'Raleway', sans-serif;\n  text-align: center;\n  color: white;\n  background-attachment: fixed\n}\n\n@media (max-width:480px) {\n  .header {\n    background: url(/images/logo3.png) no-repeat, url(/images/dogsrunningcropped.jpg) no-repeat;\n    background-size: 250px, cover;\n    background-position: center;\n  }\n}\n\n.header img {\n  max-width: 100%;\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n}\n\n.header:hover {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n}\n\n.words {\n  line-height: 70vh;\n}\n\n.homediv1 {\n  background: url(/images/Dogshover.jpg) no-repeat;\n  background-position: right;\n  display:block;\n  margin: 3%;\n  overflow: hidden;\n  font-family: 'Raleway', sans-serif;\n  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);\n  -webkit-transition: transform .5s ease-in-out;\n}\n\n.homediv1 img {\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n  opacity: 0.8;\n}\n\n.homediv1:hover img {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n  opacity: 1;\n  transition: 1s;\n}\n\n.homediv2 {\n  background: url(/images/Catshover.jpg) no-repeat;\n  background-position: left;\n  display:block;\n  margin: 3%;\n  font-family: 'Raleway', sans-serif;\n  box-shadow: 3px 4px 23px -1px rgba(0,0,0,0.48);\n  -webkit-transition: transform .5s ease-in-out;\n}\n\n.homediv2 img {\n  -moz-transition: all 1.4s;\n  -webkit-transition: all 1.4s;\n  -webkit-transition: all .5s ease-in-out;\n  opacity: 0.8;\n}\n\n.homediv2:hover img {\n  -moz-transform: scale(1.01);\n  -webkit-transform: scale(1.01);\n  transform: scale(1.01);\n  opacity: 1;\n  transition: 1s;\n}\n\n.sponsorship {\n  background-color: #222222;\n  color: #ffffff;\n  width: 100vw;\n  height: 400px;\n  text-align: center;\n  font-family: 'Raleway', sans-serif;\n}\n\n.sponsorshipHeader {\n  line-height: 10vh;\n  font-family: 'Raleway', sans-serif;\n}\n\n/*------------------------------------DisplayPets----------------------*/\n/*\n@media only screen and (max-width : 1500px) {}\n@media only screen and (max-width : 1200px) {}\n@media only screen and (max-width : 992px) {}\n@media only screen and (max-width : 768px) {}*/\n\n/*\n * Largest Screens - Everything above 1450px\n * NOTE: That all of the wrapper widths should be sized to the media query\n * max width one screen size lower.\n */\n#wrapper {\n\twidth: 1500px;\n  padding-top: 5vh;\n  margin-left: auto;\n  margin-right: auto;\n}\n\n#columns {\n  margin-top: 50px;\n  column-count: 4;\n}\n\n.thumbnail.pet-card {\n  display: inline-block;\n  -webkit-column-break-inside: avoid;\n  -moz-column-break-inside: avoid;\n  column-break-inside: avoid;\n\n  box-shadow: -2px 4px 10px -1px rgba(0,0,0,.4);\n  -webkit-transition: all .2s ease;\n  -moz-transition: all .2s ease;\n  -o-transition: all .2s ease;\n  transition: all .2s ease;\n  background-color: #f2f2f2;\n  font-family: 'Raleway', sans-serif;\n  font-size: 72px;\n  text-align: justify;\n  width: 100%;\n}\n\n.thumbnail.pet-card img {\n  width: 100%;\n  border-radius: 5px;\n}\n\n/* modal */\n#card-text {\n  font-family: 'Raleway', sans-serif;\n  font-weight: bold;\n  font-size: 16px;\n  text-align: justify;\n}\n\n.progress {\n  background-color: #b6b6b6;\n}\n\n.progress-bar {\n  font-size: 16px;\n  background-color: #d3505d;\n}\n\n .progress-bar .green-bar {\n  font-size: 16px;\n  background-color: green;\n}\n\n.heart-button {\n  color: #d3505d;\n}\n\n/* Full screen (on a 15\" MBP at least) */\n@media only screen and (max-width : 1500px) {\n  #wrapper {\n  \twidth: 1200px;\n  }\n}\n\n@media only screen and (max-width : 1200px) {\n  #wrapper {\n  \twidth: 992px;\n  }\n\n  #columns {\n    column-count: 3;\n  }\n}\n\n/* medium & small screens */\n@media only screen and (max-width : 992px) {\n  #wrapper {\n  \twidth: 90%;\n  }\n\n  #columns {\n    column-count: 1;\n  }\n\n  .thumbnail.pet-card {\n    font-size: 48px;\n  }\n\n  h2 {\n    font-size: 72px;\n  }\n  h4 {\n    font-size: 20px;\n  }\n\n  button.btn {\n    font-size: 20px;\n  }\n}\n", ""]);
 
 // exports
 

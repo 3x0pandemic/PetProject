@@ -46,7 +46,7 @@ class Sponsorship extends React.Component {
   }
 
   render() {
-    let fullySponsored = this.props.pet.amountSponsored === 500 ? "green-bar" : "";
+    let fullySponsored = this.props.pet.amountSponsored >= 500 ? "green-bar" : "red-bar";
     if(this.state.moneySent) {
       return(
         <div>
@@ -57,8 +57,11 @@ class Sponsorship extends React.Component {
     return(
       <div>
         <br/>
-        <ProgressBar className={fullySponsored} now={this.progressPercentage(parseInt(this.state.amountSponsored) + parseInt(this.state.amountInDb))}
-                     label={`$${parseInt(this.state.amountSponsored) + parseInt(this.state.amountInDb)}`} />
+        <div className={fullySponsored}>
+          <ProgressBar now={this.progressPercentage(parseInt(this.state.amountSponsored)
+            + parseInt(this.state.amountInDb))} label={`$${parseInt(this.state.amountSponsored)
+            + parseInt(this.state.amountInDb)}`} />
+        </div>
         {
           this.props.userStore.loggedIn ?
           <form>

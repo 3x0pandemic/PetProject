@@ -22,15 +22,15 @@ var _express2 = _interopRequireDefault(_express);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var router = _express2.default.Router();
+var petRoutes = _express2.default.Router();
 
-router.use(function (req, res, next) {
+petRoutes.use(function (req, res, next) {
   console.log('something is happening!');
   res.setHeader('Content-Type', 'application/json');
   next();
 });
 
-router.route('/petsdata').get(function (req, res, next) {
+petRoutes.route('/petsdata').get(function (req, res, next) {
   _pet2.default.find({ "adopted": "false" }, function (err, pets) {
     if (err) {
       next(err);
@@ -40,4 +40,14 @@ router.route('/petsdata').get(function (req, res, next) {
   });
 });
 
-exports.default = router;
+petRoutes.put('/pet/:animalId', function (req, res, next) {
+  _pet2.default.update({ animalId: req.params.animalId }, { $inc: { amountSponsored: req.body.amountSponsored } }, function (err, pet) {
+    if (err) {
+      return next(err);
+    } else {
+      res.json(pet);
+    }
+  });
+});
+
+exports.default = petRoutes;

@@ -25,7 +25,8 @@ var PetSchema = new _mongoose2.default.Schema({
   declawed: String,
   intakeDate: String,
   description: String,
-  adopted: { type: Boolean, default: false }
+  adopted: { type: Boolean, default: false },
+  amountSponsored: { type: Number, default: 0 }
 });
 
 exports.default = _mongoose2.default.model('Pet', PetSchema);

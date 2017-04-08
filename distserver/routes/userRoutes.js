@@ -124,12 +124,8 @@ userRoutes.use(function (req, res, next) {
 
 //---------End middleware--------------------
 
-// route to return all users (GET http://localhost:3000/user/users)
 userRoutes.post('/pets', function (req, res) {
   var id = req.body.id;
-  // let userPets = req.currentUser.pets || [];
-  // userPets.push(id);
-  // console.log(userPets)
   _user2.default.update({ _id: req.currentUser._id }, { $push: { pets: id } }, function (err, raw) {
     if (err) {
       console.log("error saving favorite pet " + err);

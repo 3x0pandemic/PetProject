@@ -1,4 +1,4 @@
-import { Button } from 'react-bootstrap';
+import { Button, FormGroup, ControlLabel, FormControl, Checkbox } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../public/style.css';
 import React from 'react';
@@ -22,6 +22,12 @@ class Register extends React.Component{
     this.handleSubscribedChange = this.handleSubscribedChange.bind(this);
   }
 
+  getInitialState() {
+    return {
+      value: ''
+    };
+  }
+
   handleNameChange(e) {
     this.setState({name: e.target.value});
   }
@@ -38,9 +44,27 @@ class Register extends React.Component{
     this.setState({subscribed: true});
   }
 
-  handleValidatedChange() {
-    this.setState({validated: true});
+
+
+  getNameValidationState() {
+
   }
+
+  getEmailValidationState() {
+
+  }
+
+  getPasswordValidationState() {
+    const length = this.state.password.length;
+    if (length > 5) return 'success';
+    else if (length > 5) return 'warning';
+    else if (length > 0) return 'error';
+  }
+
+  handleChange(e) {
+    this.setState({ value: e.target.value });
+  }
+
 
   addNewUserToDatabase(e) {
     e.preventDefault();
@@ -60,10 +84,6 @@ class Register extends React.Component{
     this.setState({registered: true});
   }
 
-  validateNewUser() {
-
-  }
-
 
   render() {
     if(this.state.registered === true) {
@@ -79,24 +99,51 @@ class Register extends React.Component{
     return (
       <div>
         <form>
+        <FormGroup
+        controlId="formBasicText"
+        validationState={this.getNameValidationState()}>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <ControlLabel>Name</ControlLabel>
+        <FormControl
+        type="text"
+        value={this.state.value}
+        placeholder="Enter Your Name"
+        onChange={this.handleNameChange}/>
+        <FormControl.Static />
+        </FormGroup>
+
+        <FormGroup
+        controlId="formBasicText"
+        validationState={this.getEmailValidationState()}>
+        <ControlLabel>Email Address</ControlLabel>
+        <FormControl
+        type="email"
+        value={this.state.value}
+        placeholder="Enter Your Email Address"
+        onChange={this.handleEmailChange}/>
+        <FormControl.Feedback/>
+        </FormGroup>
+
+        <FormGroup
+        controlId="formBasicText"
+        validationState={this.getPasswordValidationState()}>
+        <ControlLabel>Password</ControlLabel>
+        <FormControl
+        type="password"
+        value={this.state.value}
+        placeholder="Create A Password"
+        onChange={this.handlePasswordChange}/>
+        <FormControl.Feedback/>
+
+        </FormGroup>
+
+
+
           <br/>
-          <br/>
-          <br/>
-          <input onChange={this.handleNameChange} type="text" name="name" value={this.state.name} placeholder="Name"/>
-          <br/>
-          <br/>
-          <input onChange={this.handleEmailChange} type="email" name="email" value={this.state.email} placeholder="Email Address"/>
-          <br/>
-          <br/>
-          <input onChange={this.handlePasswordChange} type="password" name="password" value={this.state.password} placeholder="Password"/>
-          <br/>
-          <br/>
-          <p>
-            <input onClick={this.handleSubscribedChange} type="checkbox" id="cbox1" value="subscribe_checkbox"/>
-            <label>&nbsp; Get Notified As New Pets Are Added</label>
-          </p>
-          <br/>
-          <Button onClick={this.addNewUserToDatabase} type="submit">Submit</Button>
+          <Button onClick={this.addNewUserToDatabase}  type="submit">Submit</Button>
         </form>
       </div>
     );

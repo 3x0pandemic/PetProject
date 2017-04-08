@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom';
-import { Col, Button, ButtonToolbar, Modal } from 'react-bootstrap';
+import { Col, Button, ButtonToolbar, Modal, FormGroup, ControlLabel, FormControl } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../public/style.css';
 import React, {Component, PropTypes} from 'react';
@@ -18,6 +18,12 @@ class Login extends React.Component{
     this.loginHandler = this.loginHandler.bind(this);
   }
 
+  getInitialState() {
+    return {
+      value: ''
+    };
+  }
+
   handleEmailChange(e) {
     this.setState({email: e.target.value});
   }
@@ -30,6 +36,22 @@ class Login extends React.Component{
     e.preventDefault();
     this.props.userStore.authenticateUser(this.state);
   }
+
+  getEmailValidationState() {
+
+  }
+
+  getPasswordValidationState() {
+    const length = this.state.password.length;
+    if (length > 5) return 'success';
+    else if (length > 5) return 'warning';
+    else if (length > 0) return 'error';
+  }
+
+  handleChange(e) {
+    this.setState({ value: e.target.value });
+  }
+
 
   render() {
     if(this.props.userStore.loggedIn){
@@ -44,17 +66,35 @@ class Login extends React.Component{
     }
     return (
       <div>
+      <br/>
         <form>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-          <input onChange={this.handleEmailChange} type="email" name="email" value={this.state.email} required placeholder="Email Address" />
-          <br/>
-          <br/>
-          <input onChange={this.handlePasswordChange} type="password" name="password" required value={this.state.password} placeholder="Password" />
-          <br/>
-          <br/>
+          <FormGroup
+            controlId="formBasicText"
+            validationState={this.getEmailValidationState()}>
+            <br/>
+            <br/>
+            <br/>
+            <ControlLabel>Email Address</ControlLabel>
+          <FormControl
+            type="email"
+            value={this.state.value}
+            placeholder="Enter Email Address"
+            onChange={this.handleEmailChange}/>
+            <FormControl.Feedback/>
+          </FormGroup>
+
+          <FormGroup
+            controlId="formBasicText"
+            validationState={this.getPasswordValidationState()}>
+            <ControlLabel>Password</ControlLabel>
+         <FormControl
+            type="password"
+            value={this.state.value}
+            placeholder="Enter Password"
+            onChange={this.handlePasswordChange}/>
+            <FormControl.Feedback/>
+          </FormGroup>
+
           <Button onClick={this.loginHandler} type="submit">Submit</Button>
         </form>
       </div>

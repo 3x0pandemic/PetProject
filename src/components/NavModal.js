@@ -16,6 +16,7 @@ class NavModal extends React.Component{
           <Modal.Title id="contained-modal-title-lg card-text">Login or Register</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+        
           <Tabs defaultActiveKey={1} animation={false} id="noanim-tab-example">
             <Tab eventKey={1} title="Login"><Login setIsLoggedInState={this.props.setIsLoggedInState} /></Tab>
             <Tab eventKey={2} title="Register"><Register/></Tab>

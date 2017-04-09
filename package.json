@@ -41,7 +41,6 @@
     "react": "^15.4.2",
     "react-bootstrap": "^0.30.8",
     "react-dom": "^15.4.2",
-    "react-facebook": "^2.2.5",
     "react-router": "^2.5.2",
     "request": "^2.81.0",
     "toastr": "^2.1.2",

@@ -51,7 +51,7 @@ class Register extends React.Component{
   }
 
   getEmailValidationState() {
-
+    
   }
 
   getPasswordValidationState() {

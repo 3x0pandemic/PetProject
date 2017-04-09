@@ -1,4 +1,5 @@
 import { extendObservable } from 'mobx';
+import { hashHistory } from 'react-router';
 
 export default class UserStore {
   constructor() {
@@ -94,6 +95,8 @@ export default class UserStore {
   logout(e) {
     document.cookie = "token=";
     this.loggedIn = false;
+    hashHistory.replace('/#');
+
   }
 
 }

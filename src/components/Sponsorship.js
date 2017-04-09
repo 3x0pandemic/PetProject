@@ -25,7 +25,8 @@ class Sponsorship extends React.Component {
   submitHandler(e){
     e.preventDefault();
     this.sponsorPet(this.state.amountSponsored, this.props.pet.animalId);
-    this.setState({moneySent: true})
+    this.setState({moneySent: true});
+    this.props.updateSponsorshipState(this.state.amountSponsored);
   }
 
   sponsorPet(amountSponsored, animalId) {
@@ -46,7 +47,7 @@ class Sponsorship extends React.Component {
   }
 
   render() {
-    let fullySponsored = this.props.pet.amountSponsored >= 500 ? "green-bar" : "red-bar";
+    let fullySponsored = this.state.amountSponsored + this.state.amountInDb >= 500 ? "green-bar" : "red-bar";
     if(this.state.moneySent) {
       return(
         <div>
@@ -79,7 +80,8 @@ class Sponsorship extends React.Component {
 
 Sponsorship.propTypes = {
   pet: React.PropTypes.object,
-  userStore: React.PropTypes.object
+  userStore: React.PropTypes.object,
+  updateSponsorshipState: React.PropTypes.func
 };
 
 export default inject("userStore")(observer(Sponsorship));

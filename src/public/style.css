@@ -1,4 +1,3 @@
-
 body {
   background-color: #dbdbdb;
   background-size: 100%;
@@ -24,7 +23,6 @@ body {
 .navbar-brand {
   position: absolute;
   max-width: 420px;
-  padding-top: 1vh;
   padding-bottom: 0;
 }
 
@@ -36,10 +34,9 @@ body {
 
 .Navbar {
   position: fixed;
+  top: 0;
   width: 100%;
   z-index: 20;
-  margin-top: 0px;
-  padding-top: 0px;
   font-family: 'Raleway', sans-serif;
 }
 
@@ -89,11 +86,10 @@ Button:focus {
 }
 
 .homeContainer {
-  overflow: hidden;
   background-size: cover;
   width: 100%;
-  margin: 0%;
-  padding: 0%;
+  margin: 0;
+  padding: 0;
 }
 
 .header {
@@ -132,8 +128,41 @@ Button:focus {
   transform: scale(1.01);
 }
 
-.words {
-  line-height: 70vh;
+.browsePetsRow {
+  background-color: #dbdbdb;
+}
+
+.row {
+  padding: 30px;
+}
+
+.homeGrid {
+  background-color: #222222;
+}
+
+.aboutGlyphicon {
+  font-size: 32px;
+}
+
+.aboutDiv {
+  text-align: center;
+  color: #dbdbdb;
+  font-family: 'Raleway', sans-serif;
+  padding: 0 30px;
+}
+
+.aboutDiv p {
+  font-size: 20px;
+}
+
+@media only screen and (max-width : 992px) {
+  .aboutDiv h2, .aboutDiv h2 {
+    font-size: 32px;
+  }
+}
+
+.aboutHeader {
+  font-family: 'Raleway', sans-serif;
 }
 
 .homediv1 {
@@ -185,20 +214,6 @@ Button:focus {
   transform: scale(1.01);
   opacity: 1;
   transition: 1s;
-}
-
-.sponsorship {
-  background-color: #222222;
-  color: #ffffff;
-  width: 100vw;
-  height: 400px;
-  text-align: center;
-  font-family: 'Raleway', sans-serif;
-}
-
-.sponsorshipHeader {
-  line-height: 10vh;
-  font-family: 'Raleway', sans-serif;
 }
 
 /*------------------------------------DisplayPets----------------------*/
@@ -263,11 +278,15 @@ Button:focus {
 .green-bar .progress-bar {
   font-size: 16px;
   background-color: #25b38d;
+  text-align: left;
+  text-indent: 15px;
 }
 
 .red-bar .progress-bar {
- font-size: 16px;
- background-color: #d3505d;
+  font-size: 16px;
+  background-color: #d3505d;
+  text-align: left;
+  text-indent: 15px;
 }
 
 .heart-button {

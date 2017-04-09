@@ -21,7 +21,7 @@ class PopUpPet extends React.Component{
           <br/>
             <img id="image-gallery-image" className="img-responsive"
             src={this.props.pet.mainPhoto}/>
-            <Sponsorship pet={this.props.pet}/>
+            <Sponsorship updateSponsorshipState={this.props.updateSponsorshipState} pet={this.props.pet}/>
           </Col>
           <Col xs={12} md={8} lg={8}>
           <br/>
@@ -48,7 +48,8 @@ class PopUpPet extends React.Component{
 
 PopUpPet.propTypes = {
   pet: React.PropTypes.object,
-  onHide: React.PropTypes.func
+  onHide: React.PropTypes.func,
+  updateSponsorshipState: React.PropTypes.func
 };
 
 export default PopUpPet;

@@ -13,6 +13,7 @@ export default class UserStore {
     this.getCookie = this.getCookie.bind(this);
     this.checkCookie = this.checkCookie.bind(this);
     this.logout = this.logout.bind(this);
+    this.unheartPet = this.unheartPet.bind(this);
   }
 
   getUserFromDb() {
@@ -41,6 +42,22 @@ export default class UserStore {
       })
     });
     this.pets.push(pet);
+  }
+
+  unheartPet(pet) {
+    fetch('user/pets/' + pet._id, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + this.getCookie('token')
+      }
+    });
+    let favoritePets = this.pets || [];
+    let animalIds = favoritePets.map(function(pet) {
+      return pet.animalId;
+    });
+    this.pets.splice(animalIds.indexOf(pet.animalId), 1);
   }
 
   getCookie(cname) {
@@ -86,6 +103,7 @@ export default class UserStore {
         document.cookie = "token=" + res.token;
         this.loggedIn = true;
         this.getUserFromDb();
+        console.log(res.token)
       } else{
         this.loggedIn = false;
       }

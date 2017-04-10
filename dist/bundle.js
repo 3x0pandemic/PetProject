@@ -87622,7 +87622,11 @@ var PetCard = function (_React$Component) {
   }, {
     key: 'heartPet',
     value: function heartPet(e) {
-      this.props.userStore.heartPet(this.props.pet);
+      if (this.isFavorite()) {
+        this.props.userStore.unheartPet(this.props.pet);
+      } else {
+        this.props.userStore.heartPet(this.props.pet);
+      }
     }
   }, {
     key: 'cardProgressPercentage',
@@ -88035,6 +88039,7 @@ var UserStore = function () {
     this.getCookie = this.getCookie.bind(this);
     this.checkCookie = this.checkCookie.bind(this);
     this.logout = this.logout.bind(this);
+    this.unheartPet = this.unheartPet.bind(this);
   }
 
   _createClass(UserStore, [{
@@ -88070,6 +88075,23 @@ var UserStore = function () {
         })
       });
       this.pets.push(pet);
+    }
+  }, {
+    key: 'unheartPet',
+    value: function unheartPet(pet) {
+      fetch('user/pets/' + pet._id, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.getCookie('token')
+        }
+      });
+      var favoritePets = this.pets || [];
+      var animalIds = favoritePets.map(function (pet) {
+        return pet.animalId;
+      });
+      this.pets.splice(animalIds.indexOf(pet.animalId), 1);
     }
   }, {
     key: 'getCookie',
@@ -88120,6 +88142,7 @@ var UserStore = function () {
           document.cookie = "token=" + res.token;
           _this2.loggedIn = true;
           _this2.getUserFromDb();
+          console.log(res.token);
         } else {
           _this2.loggedIn = false;
         }

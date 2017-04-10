@@ -110,6 +110,18 @@ userRoutes.post('/pets', function(req, res) {
   });
 });
 
+userRoutes.delete('/pets/:id', function(req, res, next) {
+  let id = req.params.id;
+  console.log(id);
+  User.update({_id: req.currentUser._id}, { $pull: { pets: id}}, function(err, gif) {
+    if(err){
+      return next(err);
+    } else {
+      res.json({title: 'Pet was deleted'});
+    }
+  });
+});
+
 userRoutes.get('/userData', function(req, res, next) {
   User.findOne({ _id: req.currentUser._id }).populate('pets').exec(function (err, user) {
     if(err) {

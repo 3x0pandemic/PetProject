@@ -44,7 +44,11 @@ class PetCard extends React.Component {
   }
 
   heartPet(e) {
-    this.props.userStore.heartPet(this.props.pet);
+    if(this.isFavorite()) {
+      this.props.userStore.unheartPet(this.props.pet);
+    } else {
+      this.props.userStore.heartPet(this.props.pet);
+    }
   }
 
   cardProgressPercentage(num) {
